@@ -41,3 +41,7 @@ If you want to, you can also forego the provided classes and create your own but
 Should I use any specific version of Java?
 Should I provide a script to execute my program?
 Is it okay if I use the public API endpoint? (https://stream.twitter.com/1.1/statuses/sample.json)
+
+TODO:
+Messages are any message sent by twitter.
+Filter with the twitter API. 

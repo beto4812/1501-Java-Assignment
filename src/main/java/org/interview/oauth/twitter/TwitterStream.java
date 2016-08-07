@@ -31,18 +31,17 @@ public class TwitterStream {
 
 	private final String cosumerKey = "vp8qXAMoZzy6jowJdtouPLUUb";
 	private final String consumerSecret = "IMx3eIRfXXbRimoIz7cNpZCl0dr9dYEdRuDVTr2C4LdResXjN7";
-	private final String endpoint = "https://stream.twitter.com/1.1/statuses/sample.json";
+	private final String endpoint = "https://stream.twitter.com/1.1/statuses/filter.json";
 	private final String filterWord = "bieber";
-	private final int maxTimeout = 30000; // 30 seconds
-	private final int maxTwits = 100;
+	private final int maxTimeoutMs = 30000; // 30 seconds
+	private final int maxMessages = 100; // 100 messages
 
-	private TwitterAuthenticator authenticator;
 	private HashMap<String, Author> authors = new HashMap<String, Author>();
-	private Twit currentTwit;
-	private Author currentAuthor;
-	private boolean filtered = true;
-	private int type = 0; // 1 tweet // 2 delete
-	private int numberOfTwits = 0;
+	private Author currentAuthor = new Author();
+	private Twit currentTwit = new Twit();
+	private TwitterAuthenticator authenticator;
+	private int numberOfMessages = 0;
+	private int messageType = 0; // 1 twit // 2 delete
 	private SimpleDateFormat dateFormatter = new SimpleDateFormat(
 			"EEE MMM dd HH:mm:ss ZZZZZ yyyy");
 
@@ -57,7 +56,8 @@ public class TwitterStream {
 			HttpRequestFactory httpRequestFactory = authenticator
 					.getAuthorizedHttpRequestFactory();
 			HttpRequest req = httpRequestFactory
-					.buildGetRequest(new GenericUrl(endpoint));
+					.buildGetRequest(new GenericUrl(endpoint + "?track="
+							+ filterWord));
 			HttpResponse response = req.execute();
 			return response.getContent();
 		} catch (TwitterAuthenticationException e) {
@@ -77,17 +77,15 @@ public class TwitterStream {
 			parser = factory.createJsonParser(inputStream);
 			long startTime = System.nanoTime();
 			long duration = 0;
-			while (numberOfTwits < maxTwits
-					&& (duration / 1000000) < maxTimeout) {
-				// System.out.println("ok");
+			while (numberOfMessages < maxMessages
+					&& (duration / 1000000) < maxTimeoutMs) {
 				token = parser.nextToken();
 				if (token.equals(JsonToken.FIELD_NAME)) {
 					parser.nextToken();
-					if (parser.getCurrentName().equals("created_at")
-							&& currentTwit != null) {
+					if (parser.getCurrentName().equals("created_at")) {
 						insertParsed();
 					}
-					parseCurrentTwit(parser, token);
+					parseCurrent(parser, token);
 				}
 				duration = (System.nanoTime() - startTime);
 			}
@@ -98,41 +96,34 @@ public class TwitterStream {
 		}
 	}
 
-	private void parseCurrentTwit(JsonParser parser, JsonToken token)
+	private void parseCurrent(JsonParser parser, JsonToken token)
 			throws IOException, ParseException {
 		switch (parser.getCurrentName()) {
 		case "created_at":
-			type = 1;
-			if (currentTwit == null) {
-				currentTwit = new Twit();
-			}
+			messageType = 1;
 			currentTwit.setEpoch(dateFormatter.parse(parser.getText())
 					.getTime());
 			break;
 		case "text":
-			if (parser.getText().contains(filterWord)) {
-				filtered = false;
-			}
-			if (type == 1)
+			if (messageType == 1 && currentTwit.getText() == null)
 				currentTwit.setText(parser.getText());
 			break;
 		case "user":
 			parseCurrentAuthor(parser, token);
 			break;
 		case "id":
-			if (type == 1)
+			if (messageType == 1)
 				currentTwit.setId(parser.getText());
 			break;
 		case "delete":
-			type = 2;
+			System.out.println("new message...");
+			numberOfMessages++;
+			messageType = 2;
 		}
 	}
 
 	private void parseCurrentAuthor(JsonParser parser, JsonToken token)
 			throws IOException, ParseException {
-		if (currentAuthor == null) {
-			currentAuthor = new Author();
-		}
 		while (!token.equals(JsonToken.END_OBJECT)) {
 			if (token.equals(JsonToken.FIELD_NAME)) {
 				if (parser.getCurrentName().equals("id")) {
@@ -156,24 +147,24 @@ public class TwitterStream {
 	}
 
 	private void insertParsed() {
-		if (currentTwit != null && !filtered) {
-			numberOfTwits++;
+		if (currentTwit.getAuthor_id() != null) {
+			System.out.println("new message...");
+			numberOfMessages++;
 			if (authors.get(currentAuthor.getId()) == null) {
 				currentAuthor.addTwit(currentTwit);
 				authors.put(currentAuthor.getId(), currentAuthor);
 			} else {
 				authors.get(currentAuthor.getId()).addTwit(currentTwit);
 			}
-			filtered = true;
+			currentTwit = new Twit();
+			currentAuthor = new Author();
 		}
-		currentTwit = null;
-		currentAuthor = null;
 	}
 
-	private void printResults() {
+	private ArrayList<Author> getResults() {
+		ArrayList<Author> authorValues = null;
 		if (!authors.isEmpty()) {
-			ArrayList<Author> authorValues = new ArrayList<Author>(
-					authors.values());
+			authorValues = new ArrayList<Author>(authors.values());
 			Collections.sort(authorValues);
 
 			Iterator it = authorValues.iterator();
@@ -186,6 +177,7 @@ public class TwitterStream {
 		} else {
 			System.out.println("No results");
 		}
+		return authorValues;
 	}
 
 	private void start() {
@@ -195,7 +187,7 @@ public class TwitterStream {
 	public static void main(String... args) {
 		TwitterStream stream = new TwitterStream();
 		stream.start();
-		stream.printResults();
+		stream.getResults();
 	}
 
 }

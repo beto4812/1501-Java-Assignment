@@ -1,6 +1,5 @@
 package org.interview.oauth.twitter.model;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
@@ -11,9 +10,6 @@ public class Twit implements Comparable<Twit>{
 	private String text;
 	private String author_id;
 	private Calendar cal;
-	private SimpleDateFormat dateFormatter = new SimpleDateFormat(
-			"EEE MMM dd HH:mm:ss ZZZZZ yyyy");
-	
 
 	public String getId() {
 		return id;
@@ -57,7 +53,7 @@ public class Twit implements Comparable<Twit>{
 
 	@Override
 	public String toString() {
-		return "Twit [epochText=" + dateFormatter.format(epoch) + ", epoch=" + epoch + ", text=" + text
+		return "Twit [epoch=" + epoch + ", text=" + text
 				+ ", author_id=" + author_id + ", id=" + id + "]";
 	}
 
