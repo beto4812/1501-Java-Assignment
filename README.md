@@ -35,13 +35,3 @@ You will need to provide your _Consumer Key_ and _Consumer Secret_ and follow th
 With the resulting factory you are able to generate and execute all necessary requests.
 If you want to, you can also forego the provided classes and create your own but **do not use premade libraries** to interact with Twitter.
 
-
-## Questions ###
-
-Should I use any specific version of Java?
-Should I provide a script to execute my program?
-Is it okay if I use the public API endpoint? (https://stream.twitter.com/1.1/statuses/sample.json)
-
-TODO:
-Messages are any message sent by twitter.
-Filter with the twitter API. 
